@@ -1,7 +1,7 @@
 === Quiz ===
 Contributors: andy, strider72, markjaquith
 Tags: comment, spam, anti-spam, discussion, captcha
-Tested up to: 4.1
+Tested up to: 4.5.1
 Requires at least: 3.4
 Stable tag: 1.3.1
 
