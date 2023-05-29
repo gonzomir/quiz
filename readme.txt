@@ -1,9 +1,9 @@
 === Quiz ===
-Contributors: andy, strider72, markjaquith
+Contributors: andy, strider72, markjaquith, gonzomimr
 Tags: comment, spam, anti-spam, discussion, captcha
-Tested up to: 4.5.1
+Tested up to: 6.2.2
 Requires at least: 3.4
-Stable tag: 1.3.1
+Stable tag: 1.4.0
 
 Reduces spam and troll comments by requiring commenters to answer a question.
 
@@ -48,6 +48,10 @@ Tips on how to improve questions can be found at http://striderweb.com/nerdapher
 To let you see the question as it appears to other visitors, and to not unnecessarily interfere with caching systems.
 
 == Changelog ==
+
+= 1.4.0 =
+    * Improved accessibility by removing `tabindex` from form fields.
+    * Improved escaping and sanitization.
 
 = 1.3.2 =
     * by SR
@@ -116,7 +120,7 @@ To let you see the question as it appears to other visitors, and to not unnecess
 = 1.1 beta 5 =
  	* by SR
 	* Settings Screen in Admin -- no more editing files
-	* "Comment Quiz" meta box in Post/Page edit screen -- no more shortcodes. Data stored same as before, so preexisting quizzes still work	 
+	* "Comment Quiz" meta box in Post/Page edit screen -- no more shortcodes. Data stored same as before, so preexisting quizzes still work
 	* No more [short tag] system functions.  Requires WP 2.5+ for the meta boxes.
 	* Added wp_kses cleanup to quiz questions
 	* Added strip_tags to default Cleanup functions
