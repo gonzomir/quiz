@@ -49,18 +49,22 @@ class Comment_Quiz_Plugin {
 		if ( ! $id ) {
 			$id = $GLOBALS['post']->ID;
 		}
-		$quiz = get_post_meta( $id, 'quiz', true );
-		if ( ( isset( $quiz['q'] ) && 'noquiz' == $quiz['q'] ) || ( isset( $quiz['a'] ) && 'noquiz' == $quiz['a'] ) ) {
+		$quiz = (array) get_post_meta( $id, 'quiz', true );
+		if ( ( isset( $quiz['q'] ) && 'noquiz' === $quiz['q'] ) || ( isset( $quiz['a'] ) && 'noquiz' === $quiz['a'] ) ) {
 			return false;
 		}
 		if ( empty( $quiz ) || empty( $quiz['q'] ) || empty( $quiz['a'] ) ) {
 			if ( $blankdefault ) {
-				$quiz['q'] = '';
-				$quiz['a'] = '';
+				$quiz = [
+					'q' => '',
+					'a' => '',
+				];
 			} else {
 				$options = get_option( $this->option_name );
-				$quiz['q'] = $options['def_q'];
-				$quiz['a'] = $options['def_a'];
+				$quiz = [
+					'q' => $options['def_q'] ?: '',
+					'a' => $options['def_a'] ?: '',
+				];
 			}
 		}
 
