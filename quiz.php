@@ -101,7 +101,7 @@ class Comment_Quiz_Plugin {
 	}
 
 	public function ajax_callback() {
-		$quiz = $this->get_quiz( intval( wp_unslash( $_REQUEST['post_id'] ) ) ?? 0 );
+		$quiz = $this->get_quiz( intval( wp_unslash( $_REQUEST['post_id'] ?? 0 ) ) );
 		if ( $quiz ) {
 			$answers = array_map( 'trim', explode( ',', $quiz['a'] ) );
 			foreach ( $answers as $answer ) {
@@ -116,11 +116,13 @@ class Comment_Quiz_Plugin {
 	}
 
 	public function get_quiz_form( $html = false, $validate = true ) {
-		$def_quiz_form = '
-<p id="commentquiz" style="clear:both">
-	Anti-Spam Quiz: <label for="quiz">%question% </label><input type="text" name="quiz" id="quiz" size="22" tabindex="4" value="" />
-</p>
-';
+		$def_quiz_form = sprintf(
+			'<p id="commentquiz" style="clear:both">
+				<label for="quiz">%s</label><input type="text" name="quiz" id="quiz" size="22" value="" />
+			</p>',
+			// TRanslators: %quistion% is replaced with actual anti-spam question.
+			esc_html__( 'Anti-Spam Quiz: %question%', 'quiz' )
+		);
 		$options = get_option( $this->option_name );
 		if ( ! $options ||
 			empty( $options['quiz_form'] ) ||
@@ -233,7 +235,7 @@ if ( u ) {
 
 				$answer = $quiz['a'];
 				$answer = array_map( 'trim', explode( ',', $answer ) );
-				$response = stripslashes( $_POST['quiz'] );
+				$response = wp_unslash( $_POST['quiz'] );
 
 				foreach ( $answer as $a ) {
 					if ( $this->compare( $a, $response ) ) {
@@ -279,19 +281,32 @@ if ( u ) {
 		$howto2 = __( 'You may enter multiple correct answers, separated by commas; e.g. <code>color, colour</code>', 'quiz' );
 		$qlabel = __( 'Question', 'quiz' );
 		$alabel = __( 'Answer', 'quiz' );
-		echo <<< BOX
-		<input type="hidden" name="comment_quiz_metabox" id="comment_quiz_metabox" value="$nonce" />
-		<p><input type="text" name="quizQuestion" id="quizQuestion" size="25" value="$q" tabindex="3" /><label for="quizQuestion"> $qlabel</label><br />
-		<input type="text" name="quizAnswer" id="quizAnswer" size="25" value="$a" tabindex="3" /><label for="quizAnswer"> $alabel</label>
-		<span class="howto">$howto1<br />$howto2</span></p>
-BOX;
+		echo sprintf(
+			'<input type="hidden" name="comment_quiz_metabox" id="comment_quiz_metabox" value="%1$s" />
+			<p>
+			<label for="quizQuestion">%3$s</label><br />
+			<input type="text" name="quizQuestion" id="quizQuestion" size="25" value="%2$s" />
+			</p>
+			<p>
+			<label for="quizAnswer">%5$s</label><br />
+			<input type="text" name="quizAnswer" id="quizAnswer" size="25" value="%4$s" />
+			</p>
+			<p class="howto">%6$s<br />%7$s</p>',
+			esc_attr( $nonce ),
+			esc_attr( $q ),
+			esc_html( $qlabel ),
+			esc_attr( $a ),
+			esc_html( $alabel ),
+			esc_html( $howto1 ),
+			wp_kses_post( $howto2 )
+		);
 	}
 
 	public function save_meta_box( $post_id ) {
 
-		if ( ! isset( $_POST['comment_quiz_metabox'] ) || ! wp_verify_nonce( $_POST['comment_quiz_metabox'], plugin_basename( __FILE__ ) ) ) {
+		if ( ! isset( $_POST['comment_quiz_metabox'] ) || ! wp_verify_nonce( wp_unslash( $_POST['comment_quiz_metabox'] ?? '' ), plugin_basename( __FILE__ ) ) ) {
 			return $post_id;
-		} else if ( 'page' == wp_unslash( $_POST['post_type'] ) ) {
+		} else if ( 'page' == wp_unslash( $_POST['post_type'] ?? 'post' ) ) {
 			if ( ! current_user_can( 'edit_page', $post_id ) ) {
 				return $post_id;
 			}
@@ -336,19 +351,19 @@ BOX;
 	// this public function used by the settings page to display set options in the form controls when the page is opened
 	public function checktext( $options, $optname, $optdefault = '' ) {
 		// for text boxes and textareas
-		return esc_attr( ( $options[ $optname ] ) ? $options[ $optname ] : $optdefault );
+		return ( $options[ $optname ] ) ? $options[ $optname ] : $optdefault;
 	}
 
 	// Saving the options
 	public function save_options() {
 		if ( isset( $_POST['save_settings'] ) ) {
 			check_admin_referer( 'commentquiz-update-options' );
-			$options = array_map(
-				function( $field ) {
-					return sanitize_text_field( wp_unslash( $field ) );
-				},
-				(array) $_POST['commentquiz_options'] ?? []
-			);
+			$posted_data = wp_unslash( (array) $_POST['commentquiz_options'] ?? [] );
+			$options = [
+				'def_q' => sanitize_text_field( $posted_data['def_q'] ),
+				'def_a' => sanitize_text_field( $posted_data['def_a'] ),
+				'quiz_form' => $posted_data['quiz_form'],
+			];
 			update_option( $this->option_name, $options );
 			wp_redirect( add_query_arg( 'updated', 1 ) );
 			exit();
@@ -363,7 +378,7 @@ BOX;
 		?>
 <div class="wrap">
 	<h2><?php esc_html_e( 'Comment Quiz', 'quiz' ); ?></h2>
-	<form method="post" action="<?php echo $this->options_url(); ?>">
+	<form method="post" action="<?php echo esc_url( $this->options_url() ); ?>">
 		<?php
 		if ( function_exists( 'wp_nonce_field' ) ) {
 			wp_nonce_field( 'commentquiz-update-options' );
@@ -373,15 +388,22 @@ BOX;
 			<tbody>
 				<tr valign="top">
 					<th scope="row"><?php esc_html_e( 'Default Quiz', 'quiz' ); ?></th>
-					<td><input type="text" name="commentquiz_options[def_q]" id="def_q" size="35" value="<?php echo $this->checktext( $opts, 'def_q', '' ); ?>" /><label for="def_q"> <?php _e( 'Question', 'quiz' ); ?></label><br />
-						<input type="text" name="commentquiz_options[def_a]" id="def_a" size="15" value="<?php echo $this->checktext( $opts, 'def_a', '' ); ?>"/><label for="def_a"> <?php _e( 'Answer', 'quiz' ); ?></label><br />
-						<span><?php _e( 'You may enter multiple correct answers, separated by commas; e.g. <code>color, colour</code>', 'quiz' ); ?></span>esc_html
+					<td>
+						<p>
+							<label for="def_q"> <?php esc_html_e( 'Question', 'quiz' ); ?></label><br />
+							<input type="text" name="commentquiz_options[def_q]" id="def_q" size="35" value="<?php echo esc_attr( $this->checktext( $opts, 'def_q', '' ) ); ?>" />
+						</p>
+						<p>
+							<label for="def_a"> <?php esc_html_e( 'Answer', 'quiz' ); ?></label><br />
+							<input type="text" name="commentquiz_options[def_a]" id="def_a" size="15" value="<?php echo esc_attr( $this->checktext( $opts, 'def_a', '' ) ); ?>"/>
+						</p>
+						<p><?php echo wp_kses_post( __( 'You may enter multiple correct answers, separated by commas; e.g. <code>color, colour</code>', 'quiz' ) ); ?></p>
 					</td>
 				</tr>
 				<tr valign="top">
 					<th scope="row"><?php esc_html_e( 'Quiz Form', 'quiz' ); ?></th>
-					<td><textarea name="commentquiz_options[quiz_form]" id="quiz_form" cols="60" rows="6"><?php echo esc_textarea( $this->get_quiz_form( true, false ) ); ?></textarea><br />
-					<span><?php wp_kses_post( _e( 'The form must contain a %question% placeholder.<br />To reset to default, blank this field and save settings.', 'quiz' ) ); ?></span>
+					<td><textarea name="commentquiz_options[quiz_form]" id="quiz_form" cols="60" rows="6"><?php echo esc_textarea( $this->get_quiz_form( false, false ) ); ?></textarea><br />
+					<span><?php echo wp_kses_post( __( 'The form must contain a %question% placeholder.<br />To reset to default, blank this field and save settings.', 'quiz' ) ); ?></span>
 					</td>
 				</tr>
 			</tbody>
